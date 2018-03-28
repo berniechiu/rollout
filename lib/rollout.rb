@@ -2,10 +2,13 @@ require "rollout/version"
 require "zlib"
 require "set"
 require "json"
+require "memoist"
 
 class Rollout
+  extend Memoist
+
   RAND_BASE = (2**32 - 1) / 100.0
-  
+
   class Feature
     attr_accessor :groups, :users, :percentage, :data
     attr_reader :name, :options
@@ -218,15 +221,18 @@ class Rollout
     feature = get(feature)
     feature.active?(self, user)
   end
+  memoize :active?
 
   def user_in_active_users?(feature, user = nil)
     feature = get(feature)
     feature.user_in_active_users?(user)
   end
+  memoize :user_in_active_users?
 
   def inactive?(feature, user = nil)
     !active?(feature, user)
   end
+  memoize :inactive?
 
   def activate_percentage(feature, percentage)
     with_feature(feature) do |f|
