@@ -5,9 +5,8 @@ require "json"
 require "memoist"
 
 class Rollout
-  extend Memoist
-
   RAND_BASE = (2**32 - 1) / 100.0
+  MEMOIZERS = [:active?, :user_in_active_users?, :exists?]
 
   class Feature
     attr_accessor :groups, :users, :percentage, :data
@@ -221,18 +220,15 @@ class Rollout
     feature = get(feature)
     feature.active?(self, user)
   end
-  memoize :active?
 
   def user_in_active_users?(feature, user = nil)
     feature = get(feature)
     feature.user_in_active_users?(user)
   end
-  memoize :user_in_active_users?
 
   def inactive?(feature, user = nil)
     !active?(feature, user)
   end
-  memoize :inactive?
 
   def activate_percentage(feature, percentage)
     with_feature(feature) do |f|
@@ -300,6 +296,12 @@ class Rollout
 
   def exists?(feature)
     @storage.exists(key(feature))
+  end
+
+  def memoize!
+    self.class.extend(Memoist)
+    MEMOIZERS.each { |meth| self.class.memoize(meth) }
+    self
   end
 
   private
